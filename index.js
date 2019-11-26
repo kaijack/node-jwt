@@ -9,6 +9,10 @@ const passportJWT = require('passport-jwt');
 let ExtractJwt = passportJWT.ExtractJwt;
 let JwtStrategy = passportJWT.Strategy;
 
+let config = require('./config');
+let middleware = require('./middleware');
+
+
 let jwtOptions = {};
 jwtOptions.jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken();
 jwtOptions.secretOrKey = 'wowwow';
@@ -46,6 +50,7 @@ const sequelize = new Sequelize({
     dialect: 'mysql',
 });
 
+
 // check the databse connection
 sequelize
     .authenticate()
@@ -62,9 +67,22 @@ const User = sequelize.define('user', {
     },
 });
 
+const Blog = sequelize.define('blog', {
+    title: {
+        type: Sequelize.STRING,
+    },
+    description: {
+        type: Sequelize.STRING,
+    },
+});
+
 // create table with user model
 User.sync()
     .then(() => console.log('User table created successfully'))
+    .catch(err => console.log('oooh, did you enter wrong database credentials?'));
+
+Blog.sync()
+    .then(() => console.log('Blog table created successfully'))
     .catch(err => console.log('oooh, did you enter wrong database credentials?'));
 
 // create some helper functions to work on the database
@@ -82,6 +100,22 @@ const getUser = async obj => {
     });
 };
 
+// create some helper functions to work on the database
+const createBlog = async ({ title, description }) => {
+    return await Blog.create({ title, description });
+};
+
+const getAllBlog = async () => {
+    return await Blog.findAll();
+};
+
+const getBlog = async obj => {
+    return await Blog.findOne({
+        where: obj,
+    });
+};
+
+
 // set some basic routes
 app.get('/', function(req, res) {
     res.json({ message: 'Express is up!' });
@@ -91,6 +125,18 @@ app.get('/', function(req, res) {
 app.get('/users', function(req, res) {
     getAllUsers().then(user => res.json(user));
 });
+
+// get all blog
+app.get('/blogs', middleware.checkToken, function(req, res) {
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+    getAllBlog().then(user => res.json(user));
+    // res.json({
+    //     success: true,
+    //     message: 'Index page'
+    //   });
+});
+
+
 
 var cors = require('cors')
 
@@ -125,7 +171,7 @@ app.post('/login', async function(req, res, next) {
             // from now on we'll identify the user by the id and the id is the 
             // only personalized value that goes into our token
             let payload = { id: user.id };
-            let token = jwt.sign(payload, jwtOptions.secretOrKey);
+            let token = jwt.sign(payload, config.secret);
             res.json({ msg: 'ok', token: token });
         } else {
             res.status(401).json({ msg: 'Password is incorrect' });
