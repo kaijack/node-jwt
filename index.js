@@ -125,24 +125,33 @@ app.get('/', function(req, res) {
 app.get('/users', function(req, res) {
     getAllUsers().then(user => res.json(user));
 });
-
-// get all blog
-app.get('/blogs', middleware.checkToken, function(req, res) {
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
-    getAllBlog().then(user => res.json(user));
-    // res.json({
-    //     success: true,
-    //     message: 'Index page'
-    //   });
-});
-
-
-
 var cors = require('cors')
 
 app.use(cors())
 app.options('*', cors())
 
+
+// get all blog
+app.get('/blogs', cors(),
+    function(req, res) {
+        res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+        getAllBlog().then(user => res.json(user));
+        // res.json({
+        //     success: true,
+        //     message: 'Index page'
+        //   });
+    });
+
+
+// register route
+app.post('/blogs', cors(), function(req, res, next) {
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+
+    const { title, description } = req.body;
+    createBlog({ title, description }).then(user =>
+        res.json({ user, msg: 'created successfully' })
+    );
+});
 
 app.all('/*', function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -172,7 +181,12 @@ app.post('/login', async function(req, res, next) {
             // only personalized value that goes into our token
             let payload = { id: user.id };
             let token = jwt.sign(payload, config.secret);
-            res.json({ msg: 'ok', token: token });
+            res.json({
+                msg: 'ok',
+                // username: 'asd',
+                // roles: 'admin',
+                token: token
+            });
         } else {
             res.status(401).json({ msg: 'Password is incorrect' });
         }
