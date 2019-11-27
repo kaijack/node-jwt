@@ -105,6 +105,10 @@ const createBlog = async ({ title, description }) => {
     return await Blog.create({ title, description });
 };
 
+const updateBlog = async ({ title, description }) => {
+    return await Blog.update({ title, description });
+};
+
 const getAllBlog = async () => {
     return await Blog.findAll();
 };
@@ -144,7 +148,7 @@ app.get('/blogs', cors(),
 
 
 // register route
-app.post('/blogs', cors(), function(req, res, next) {
+app.post('/blogs', cors(), middleware.checkToken, function(req, res, next) {
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
 
     const { title, description } = req.body;
@@ -152,6 +156,27 @@ app.post('/blogs', cors(), function(req, res, next) {
         res.json({ user, msg: 'created successfully' })
     );
 });
+
+
+app.put('/blogs/:id', (req, res) => {
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+    let sql = "UPDATE blogs SET title='" + req.body.title + "', description='" + req.body.description + "' WHERE id=" + req.params.id;
+    let query = sequelize.query(sql, (err, results) => {
+        if (err) throw err;
+
+        res.send(JSON.stringify({ "status": 200, "error": null, "response": results }));
+    });
+});
+app.delete('/blogs/:id', (req, res) => {
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+    let sql = "DELETE FROM blogs WHERE id=" + req.params.id + "";
+    let query = sequelize.query(sql, (err, results) => {
+        if (err) throw err;
+        res.send(JSON.stringify({ "status": 200, "error": null, "response": results }));
+    });
+});
+
+
 
 app.all('/*', function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
