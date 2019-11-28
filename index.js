@@ -76,12 +76,25 @@ const Blog = sequelize.define('blog', {
     },
 });
 
+var Book = sequelize.define('books', {
+    title: {
+        type: Sequelize.STRING
+    },
+    pages: {
+        type: Sequelize.INTEGER
+    }
+})
+
 // create table with user model
 User.sync()
     .then(() => console.log('User table created successfully'))
     .catch(err => console.log('oooh, did you enter wrong database credentials?'));
 
 Blog.sync()
+    .then(() => console.log('Blog table created successfully'))
+    .catch(err => console.log('oooh, did you enter wrong database credentials?'));
+
+Book.sync()
     .then(() => console.log('Blog table created successfully'))
     .catch(err => console.log('oooh, did you enter wrong database credentials?'));
 
@@ -106,7 +119,7 @@ const createBlog = async ({ title, description }) => {
 };
 
 const updateBlog = async ({ title, description }) => {
-    return await Blog.update({ title, description });
+    return await Blog.findById({ title, description });
 };
 
 const getAllBlog = async () => {
@@ -118,7 +131,6 @@ const getBlog = async obj => {
         where: obj,
     });
 };
-
 
 // set some basic routes
 app.get('/', function(req, res) {
@@ -136,6 +148,18 @@ app.options('*', cors())
 
 
 // get all blog
+
+
+// create route
+app.post('/blogs', cors(), function(req, res, next) {
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+    const { title, description } = req.body;
+    createBlog({ title, description }).then(user =>
+        res.json({ user, msg: 'created successfully' })
+    );
+});
+
+//read
 app.get('/blogs', cors(),
     function(req, res) {
         res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
@@ -147,35 +171,55 @@ app.get('/blogs', cors(),
     });
 
 
-// register route
-app.post('/blogs', cors(), middleware.checkToken, function(req, res, next) {
+app.put('/blogs/:id', async (req, res) => {
+
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+    Blog.update({
+        title: req.body.title,
+        description: req.body.description
+    }, {
+        returning: true,
+        where: { id: req.params.id }
+    }).then(updatedBlog => {
+        console.log(updatedBlog)
+        return res.status(200).send({
+            code: 200,
+            status: 'ok',
+            message: 'Blog updated',
+            data: updatedBlog
+        })
+    }).catch(err => {
+        console.log(err)
+        return res.status(err.status || 500).send({
+            code: 500,
+            status: 'error',
+            message: err.message || 'Update blog failed'
+        })
+    })
+})
 
-    const { title, description } = req.body;
-    createBlog({ title, description }).then(user =>
-        res.json({ user, msg: 'created successfully' })
-    );
-});
 
-
-app.put('/blogs/:id', (req, res) => {
+//delete
+app.delete('/blogs/:id', async (req, res) => {
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
-    let sql = "UPDATE blogs SET title='" + req.body.title + "', description='" + req.body.description + "' WHERE id=" + req.params.id;
-    let query = sequelize.query(sql, (err, results) => {
-        if (err) throw err;
-
-        res.send(JSON.stringify({ "status": 200, "error": null, "response": results }));
-    });
-});
-app.delete('/blogs/:id', (req, res) => {
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
-    let sql = "DELETE FROM blogs WHERE id=" + req.params.id + "";
-    let query = sequelize.query(sql, (err, results) => {
-        if (err) throw err;
-        res.send(JSON.stringify({ "status": 200, "error": null, "response": results }));
-    });
-});
-
+    Blog.findOne({
+        where: { id: req.params.id }
+    }).then(blog => {
+        blog.destroy()
+        res.status(200).send({
+            code: 200,
+            status: 'ok',
+            message: 'Blog deleted'
+        })
+    }).catch(err => {
+        console.log(err)
+        res.status(err.status || 500).send({
+            code: err.status || 500,
+            status: 'error',
+            message: err.message || 'Delete blog failed'
+        })
+    })
+})
 
 
 app.all('/*', function(req, res, next) {
